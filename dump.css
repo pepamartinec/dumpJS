@@ -33,12 +33,27 @@ div.var-dump li.expanded .bullet {
 }
 
 div.var-dump .string {
-	color: #f66;
+	color: #f12;
 }
 
 div.var-dump .boolean,
 div.var-dump .null,
 div.var-dump .undefined,
 div.var-dump .empty {
-	color: #39c;
+	color: #33e;
+}
+
+
+div.var-dump.popup {
+	position : absolute;
+	z-index  : 100000;
+	
+	padding  : 5px;
+	
+	background-color : #FFFA6D;
+	border           : 1px solid #A09A00;
+	border-radius    : 5px;
+	
+	max-height : 500px;
+	overflow   : auto;
 }

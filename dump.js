@@ -240,7 +240,64 @@
 		throw 'Unknown type variable';
 	}
 	
-	this.dump = function( variable )
+	function viewportSize()
+	{
+		var e = window,
+		    a = 'inner';
+		
+		if( !( 'innerWidth' in window ) ) {
+			a = 'client';
+			e = document.documentElement || document.body;
+		}
+		
+		return [ e[ a+'Width' ], e[ a+'Height' ] ];
+	}
+	
+	var Popup = function() {
+		var div = this.div = document.createElement( 'div' );
+		
+		div.className = 'var-dump popup';
+		div.addEventListener( 'mousedown', function( e ) {
+			e.stopPropagation();
+		});
+		
+		var me = this;
+		this.blurCheck = function( e )
+		{
+			me.dispose();
+			document.body.removeEventListener( 'mousedown', me.blurCheck );
+		};
+	};
+	
+	Popup.prototype = {
+		setDump : function( dump ) {
+			var div = this.div;
+			
+			div.innerHTML = '';
+			div.appendChild( dump );
+		},
+		
+		showAt : function( pos )
+		{
+			var div    = this.div,
+			    vpSize = viewportSize(),
+			    left   = pos[0] - 30,
+			    bottom = vpSize[1] - pos[1] + 15;
+			
+			div.setAttribute( 'style', 'bottom:'+ bottom +'px; left:'+ left +'px' );
+			document.body.appendChild( div );
+			document.body.addEventListener( 'mousedown', this.blurCheck );
+		},
+		
+		dispose : function()
+		{
+			this.div.parentNode.removeChild( this.div );
+		}
+	};
+	
+	var popup = new Popup();
+	
+	function dump( variable )
 	{
 		var type = types[ findType( variable ) ],
 		    dump = type.dump( variable ),
@@ -250,6 +307,18 @@
 		wrap.appendChild( dump );
 		
 		return wrap;
-	};
+	}
+	
+	function showPopup( position, variable )
+	{
+		var type = types[ findType( variable ) ],
+		    dump = type.dump( variable );
+		
+		popup.setDump( dump );
+		popup.showAt( position );
+	}
+	
+	this.dump = dump;
+	this.dump.popup = showPopup;
 
 }).call( this );
