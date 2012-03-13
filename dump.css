@@ -1,0 +1,44 @@
+div.var-dump {
+	
+}
+
+div.var-dump ol {
+	padding-left : 10px;
+}
+
+div.var-dump li {
+	padding-left : 5px;
+}
+
+div.var-dump li.collapsed,
+div.var-dump li.expanded {
+	cursor: pointer;
+}
+
+div.var-dump .bullet {
+	width  : 16px;
+	height : 16px;
+	
+	float       : left;
+	margin-left : -16px;
+	
+	background: url('data:;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAQAAAC1+jfqAAAAAXNSR0IArs4c6QAAAAJiS0dEAP+Hj8y/AAAACXBIWXMAAAsTAAALEwEAmpwYAAAAB3RJTUUH3AMNDxgN6xR3IAAAAFlJREFUKM9j/M+AHzAx0FdBUUIRARPmM5wr4sRvhSHD7gJB/G6wZjqbK4zfkYqse3IE8Cm4w+I65QNuBcdkbLreILgsaNIXrHxD3uF2ZJKVEao0AwMj7SMLAB+2E4a7Cmo0AAAAAElFTkSuQmCC') no-repeat left center;
+}
+
+div.var-dump li.expanded .bullet {
+	transform: rotate(45deg);
+	-webkit-transform: rotate(45deg);
+	-moz-transform: rotate(45deg);
+	-ms-transform: rotate(45deg);
+}
+
+div.var-dump .string {
+	color: #f66;
+}
+
+div.var-dump .boolean,
+div.var-dump .null,
+div.var-dump .undefined,
+div.var-dump .empty {
+	color: #39c;
+}
