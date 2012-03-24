@@ -87,7 +87,7 @@ DumpJS = {};
 		};
 		
 		if( this.dump == null ) {
-			this.dump = this.value;
+			this.dump = this.defaultDump;
 		}
 		
 		types[ this.name ] = this;
@@ -125,6 +125,21 @@ DumpJS = {};
 		 * @return {HTMLElement}
 		 */
 		dumpContent : null,
+		
+		/**
+		 * Fallback dump handler
+		 * 
+		 * @private
+		 * @param {Mixed} value
+		 * @return {HTMLElement}
+		 */
+		defaultDump : function( value )
+		{
+			var dump = document.createElement( 'div' );
+			dump.innerHTML = this.value( value );
+			
+			return dump;
+		},
 		
 		dumpEnumerableContent : function( name, item ) {
 			var type = types[ findType( item ) ],
