@@ -1,8 +1,77 @@
+/**
+ * DumpJS
+ * 
+ * @singleton
+ * @class DumpJS
+ */
+DumpJS = {};
+
 (function() {
 	
-	var types = {};
+	var types = DumpJS.types = {},
+	    popup = null;
 	
-	var Type = function( name, config ) {
+	function findType( value )
+	{
+		var name = null;
+		
+		for( name in types ) {
+			if( types.hasOwnProperty( name ) === false ) {
+				continue;
+			}
+			
+			if( types[ name ].check( value ) ) {
+				return name;
+			}
+		}
+		
+		throw 'Unknown type variable';
+	}
+	
+	/**
+	 * Dumps supplied variable
+	 * 
+	 * @param {Mixed} variable
+	 * @return {HTMLElement}
+	 */
+	DumpJS.dump = function dump( variable )
+	{
+		var type = types[ findType( variable ) ],
+		    dump = type.dump( variable ),
+		    wrap = document.createElement( 'div' );
+		
+		wrap.className = 'var-dump';
+		wrap.appendChild( dump );
+		
+		return wrap;
+	};
+	
+	/**
+	 * Shows variable dump popup
+	 * 
+	 * @param {Array} position
+	 * @param {Mixed} variable
+	 * @return {HTMLElement}
+	 */
+	DumpJS.popup = function ( position, variable )
+	{
+		if( popup === null ) {
+			popup = new Popup();
+		}
+		
+		var type = types[ findType( variable ) ],
+		    dump = type.dump( variable );
+		
+		popup.setDump( dump );
+		popup.showAt( position );
+	};
+	
+	/**
+	 * Data type class
+	 * 
+	 * @class DumpJS.Type
+	 */
+	var Type = DumpJS.Type = function( name, config ) {
 		this.name = name;
 		
 		for( k in config ) {
@@ -24,7 +93,161 @@
 		types[ this.name ] = this;
 	};
 	
-	new Type( 'array', {
+	Type.prototype = {
+		/**
+		 * Ckecks whether supplied value type matches this
+		 * 
+		 * @param {Mixed} value
+		 * @return {boolean}
+		 */
+		check : null,
+		
+		/**
+		 * Converts value to its string representation
+		 * 
+		 * @param {Mixed} value
+		 * @return {string}
+		 */
+		value : null,
+		
+		/**
+		 * Creates value dump
+		 * 
+		 * @param {Mixed} value
+		 * @return {HTMLElement}
+		 */
+		dump  : null,
+		
+		/**
+		 * Dumps content of 'container' value (e.g. Object and Array)
+		 * 
+		 * @param {Mixed} value
+		 * @return {HTMLElement}
+		 */
+		dumpContent : null,
+		
+		dumpEnumerableContent : function( name, item ) {
+			var type = types[ findType( item ) ],
+			    li   = document.createElement( 'li' );
+			
+			if( type.dumpContent ) {
+				var bullet = document.createElement( 'div' );
+				bullet.className = 'bullet';
+				li.appendChild( bullet );
+				
+				li.className = 'collapsed';
+				
+				
+				li.addEventListener( 'click', function() {
+					var detailEl = li.nextSibling;
+					
+					if( detailEl == null || detailEl.nodeName !== 'OL' ) {
+						detailEl = type.dumpContent( item );
+						
+						li.parentNode.insertBefore( detailEl, li.nextSibling );
+					}
+		
+					if( /collapsed/.test( li.className ) === true ) {
+						li.className = 'expanded';
+						detailEl.style.display = 'block';
+						
+					} else {
+						li.className = 'collapsed';
+						detailEl.style.display = 'none';
+					}
+				});
+			}
+			
+			span = document.createElement( 'span' );
+			span.className   = 'name';
+			span.textContent = name;
+			li.appendChild( span );
+			
+			span = document.createElement( 'span' );
+			span.className   = 'separator';
+			span.textContent = ': ';
+			li.appendChild( span );
+			
+			span = document.createElement( 'span' );
+			span.className = 'value';
+			span.innerHTML = type.value( item );
+			li.appendChild( span );
+			
+			return li;
+		}
+	};
+	
+	/**
+	 * Popup class
+	 * 
+	 * @class DumpJS.Popup
+	 */
+	var Popup = DumpJS.Popup = function() {
+		var div = this.div = document.createElement( 'div' );
+		
+		div.className = 'var-dump popup';
+		div.addEventListener( 'mousedown', function( e ) {
+			e.stopPropagation();
+		});
+		
+		var me = this;
+		this.blurCheck = function( e )
+		{
+			me.dispose();
+			document.body.removeEventListener( 'mousedown', me.blurCheck );
+		};
+	};
+	
+	Popup.prototype = {
+		setDump : function( dump )
+		{
+			var div = this.div;
+			
+			div.innerHTML = '';
+			div.appendChild( dump );
+		},
+		
+		showAt : function( pos )
+		{
+			var div    = this.div,
+			    vpSize = this.viewportSize(),
+			    left   = pos[0] - 30,
+			    bottom = vpSize[1] - pos[1] + 15;
+			
+			div.setAttribute( 'style', 'bottom:'+ bottom +'px; left:'+ left +'px' );
+			document.body.appendChild( div );
+			document.body.addEventListener( 'mousedown', this.blurCheck );
+		},
+		
+		dispose : function()
+		{
+			this.div.parentNode.removeChild( this.div );
+		},
+		
+		viewportSize : function()
+		{
+			var e = window,
+			    a = 'inner';
+			
+			if( !( 'innerWidth' in window ) ) {
+				a = 'client';
+				e = document.documentElement || document.body;
+			}
+			
+			return [ e[ a+'Width' ], e[ a+'Height' ] ];
+		}
+	};
+
+	
+	// ****** REGISTER DATA TYPES ****** //
+	
+	/**
+	 * Javascript Array
+	 * 
+	 * @class DumpJS.types.Array
+	 * @extends DumpJS.Type
+	 */
+	new Type( 'Array', {
 		check : function( v ) {
 			return toString.call( v ) === '[object Array]';
 		},
@@ -41,7 +264,7 @@
 			var ol = document.createElement( 'ol' );
 			
 			for( var i = 0, len = obj.length; i < len; ++i ) {				
-				ol.appendChild( dumpEnumerableContent( i, obj[ i ] ) );
+				ol.appendChild( this.dumpEnumerableContent( i, obj[ i ] ) );
 			}
 			
 			if( ol.childNodes.length === 0 ) {
@@ -56,7 +279,13 @@
 		}
 	});
 	
-	new Type( 'object', {
+	/**
+	 * Javascript Object
+	 * 
+	 * @class DumpJS.types.Object
+	 * @extends DumpJS.Type
+	 */
+	new Type( 'Object', {
 		check : function( v ) {
 			return v === Object( v );
 		},
@@ -78,7 +307,7 @@
 					continue;
 				}
 				
-				ol.appendChild( dumpEnumerableContent( k, obj[ k ] ) );
+				ol.appendChild( this.dumpEnumerableContent( k, obj[ k ] ) );
 			}
 			
 			if( ol.childNodes.length === 0 ) {
@@ -93,7 +322,13 @@
 		}
 	});
 	
-	new Type( 'function', {
+	/**
+	 * Javascript Function
+	 * 
+	 * @class DumpJS.types.Function
+	 * @extends DumpJS.Type
+	 */
+	new Type( 'Function', {
 		check : function( v ) {
 			return toString.call( v ) === '[object Function]';
 		},
@@ -103,7 +338,13 @@
 		}
 	});
 	
-	new Type( 'string', {
+	/**
+	 * Javascript String object or string primitive
+	 * 
+	 * @class DumpJS.types.String
+	 * @extends DumpJS.Type
+	 */
+	new Type( 'String', {
 		check : function( v ) {
 			return toString.call( v ) === '[object String]';
 		},
@@ -112,8 +353,14 @@
 			return '"'+ v + '"';
 		}
 	});
-	
-	new Type( 'number', {
+
+	/**
+	 * Javascript Number object or number primitive
+	 * 
+	 * @class DumpJS.types.Number
+	 * @extends DumpJS.Type
+	 */
+	new Type( 'Number', {
 		check : function( v ) {
 			return toString.call( v ) === '[object Number]';
 		},
@@ -122,8 +369,14 @@
 			return v;
 		}
 	});
-	
-	new Type( 'boolean', {
+
+	/**
+	 * Javascript Boolean object or booean primitive
+	 * 
+	 * @class DumpJS.types.Boolean
+	 * @extends DumpJS.Type
+	 */
+	new Type( 'Boolean', {
 		check : function( v ) {
 			return v === true || v === false || toString.call( v ) === '[object Boolean]';
 		},
@@ -132,8 +385,14 @@
 			return v ? 'true' : 'true';
 		}
 	});
-	
-	new Type( 'date', {
+
+	/**
+	 * Javascript Date object
+	 * 
+	 * @class DumpJS.types.Date
+	 * @extends DumpJS.Type
+	 */
+	new Type( 'Date', {
 		check : function( v ) {
 			return toString.call( v ) === '[object Date]';
 		},
@@ -142,8 +401,14 @@
 			return v;
 		}
 	});
-	
-	new Type( 'regexp', {
+
+	/**
+	 * Javascript Regexp (regular expression) object
+	 * 
+	 * @class DumpJS.types.Regexp
+	 * @extends DumpJS.Type
+	 */
+	new Type( 'Regexp', {
 		check : function( v ) {
 			return toString.call( v ) == '[object RegExp]';
 		},
@@ -152,8 +417,14 @@
 			return v;
 		}
 	});
-	
-	new Type( 'null', {
+
+	/**
+	 * Javascript null
+	 * 
+	 * @class DumpJS.types.Null
+	 * @extends DumpJS.Type
+	 */
+	new Type( 'Null', {
 		check : function( v ) {
 			return v === null;
 		},
@@ -162,8 +433,14 @@
 			return 'null';
 		}
 	});
-	
-	new Type( 'undefined', {
+
+	/**
+	 * Javascript undefined
+	 * 
+	 * @class DumpJS.types.Undefined
+	 * @extends DumpJS.Type
+	 */
+	new Type( 'Undefined', {
 		check : function( v ) {
 			return v === undefined;
 		},
@@ -172,153 +449,4 @@
 			return 'undefined';
 		}
 	});
-	
-	function dumpEnumerableContent( name, item ) {
-		var type = types[ findType( item ) ],
-		    li   = document.createElement( 'li' );
-		
-		if( type.dumpContent ) {
-			var bullet = document.createElement( 'div' );
-			bullet.className = 'bullet';
-			li.appendChild( bullet );
-			
-			li.className = 'collapsed';
-			
-			
-			li.addEventListener( 'click', function() {
-				var detailEl = li.nextSibling;
-				
-				if( detailEl == null || detailEl.nodeName !== 'OL' ) {
-					detailEl = type.dumpContent( item );
-					
-					li.parentNode.insertBefore( detailEl, li.nextSibling );
-				}
-	
-				if( /collapsed/.test( li.className ) === true ) {
-					li.className = 'expanded';
-					detailEl.style.display = 'block';
-					
-				} else {
-					li.className = 'collapsed';
-					detailEl.style.display = 'none';
-				}
-			});
-		}
-		
-		span = document.createElement( 'span' );
-		span.className   = 'name';
-		span.textContent = name;
-		li.appendChild( span );
-		
-		span = document.createElement( 'span' );
-		span.className   = 'separator';
-		span.textContent = ': ';
-		li.appendChild( span );
-		
-		span = document.createElement( 'span' );
-		span.className = 'value';
-		span.innerHTML = type.value( item );
-		li.appendChild( span );
-		
-		return li;
-	}
-	
-	function findType( value )
-	{
-		var name = null;
-		
-		for( name in types ) {
-			if( types.hasOwnProperty( name ) === false ) {
-				continue;
-			}
-			
-			if( types[ name ].check( value ) ) {
-				return name;
-			}
-		}
-		
-		throw 'Unknown type variable';
-	}
-	
-	function viewportSize()
-	{
-		var e = window,
-		    a = 'inner';
-		
-		if( !( 'innerWidth' in window ) ) {
-			a = 'client';
-			e = document.documentElement || document.body;
-		}
-		
-		return [ e[ a+'Width' ], e[ a+'Height' ] ];
-	}
-	
-	var Popup = function() {
-		var div = this.div = document.createElement( 'div' );
-		
-		div.className = 'var-dump popup';
-		div.addEventListener( 'mousedown', function( e ) {
-			e.stopPropagation();
-		});
-		
-		var me = this;
-		this.blurCheck = function( e )
-		{
-			me.dispose();
-			document.body.removeEventListener( 'mousedown', me.blurCheck );
-		};
-	};
-	
-	Popup.prototype = {
-		setDump : function( dump ) {
-			var div = this.div;
-			
-			div.innerHTML = '';
-			div.appendChild( dump );
-		},
-		
-		showAt : function( pos )
-		{
-			var div    = this.div,
-			    vpSize = viewportSize(),
-			    left   = pos[0] - 30,
-			    bottom = vpSize[1] - pos[1] + 15;
-			
-			div.setAttribute( 'style', 'bottom:'+ bottom +'px; left:'+ left +'px' );
-			document.body.appendChild( div );
-			document.body.addEventListener( 'mousedown', this.blurCheck );
-		},
-		
-		dispose : function()
-		{
-			this.div.parentNode.removeChild( this.div );
-		}
-	};
-	
-	var popup = new Popup();
-	
-	function dump( variable )
-	{
-		var type = types[ findType( variable ) ],
-		    dump = type.dump( variable ),
-		    wrap = document.createElement( 'div' );
-		
-		wrap.className = 'var-dump';
-		wrap.appendChild( dump );
-		
-		return wrap;
-	}
-	
-	function showPopup( position, variable )
-	{
-		var type = types[ findType( variable ) ],
-		    dump = type.dump( variable );
-		
-		popup.setDump( dump );
-		popup.showAt( position );
-	}
-	
-	this.dump = dump;
-	this.dump.popup = showPopup;
-
-}).call( this );
+})();
